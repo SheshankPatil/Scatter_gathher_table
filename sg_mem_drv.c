@@ -18,6 +18,7 @@
 #include <linux/uaccess.h>
 
 #define DEVICE_NAME "sg_mem"
+#define CUSTOM_PAGE_SIZE 1024  // Override default 4096 with 1024 bytes
 
 struct sg_mem_dev {
   struct page **pages; /* dynamic array */
@@ -81,7 +82,7 @@ static void build_descriptor_table(struct sg_mem_dev *sdev) {
   __u32 total_len = 0;
 
   memset(dt, 0, sizeof(*dt));
-  dt->page_size = PAGE_SIZE;
+  dt->page_size = CUSTOM_PAGE_SIZE;
 
   idx = 0;
   for_each_sgtable_dma_sg(&sdev->sgt, sg, idx) {
@@ -123,14 +124,14 @@ static int sg_mem_alloc(struct sg_mem_dev *sdev, __u32 size_bytes) {
   __u32 remaining, chunk_idx;
   struct scatterlist *sg;
 
-  if (size_bytes == 0 || size_bytes > (MAX_DESCRIPTORS * PAGE_SIZE)) {
+  if (size_bytes == 0 || size_bytes > (MAX_DESCRIPTORS * CUSTOM_PAGE_SIZE)) {
     pr_err("sg_mem: invalid size %u (max %lu)\n", size_bytes,
-           MAX_DESCRIPTORS * PAGE_SIZE);
+           MAX_DESCRIPTORS * CUSTOM_PAGE_SIZE);
     return -EINVAL;
   }
 
   /* Calculate number of chunks */
-  sdev->num_chunks = (size_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+  sdev->num_chunks = (size_bytes + CUSTOM_PAGE_SIZE - 1) / CUSTOM_PAGE_SIZE;
   sdev->total_size = size_bytes;
 
   pr_info("sg_mem: Allocating %u bytes in %u chunks\n", size_bytes,
@@ -166,8 +167,8 @@ static int sg_mem_alloc(struct sg_mem_dev *sdev, __u32 size_bytes) {
       goto err_free_pages;
     }
 
-    /* Full PAGE_SIZE or remainder */
-    chunk_size = (remaining >= PAGE_SIZE) ? PAGE_SIZE : remaining;
+    /* Full CUSTOM_PAGE_SIZE or remainder */
+    chunk_size = (remaining >= CUSTOM_PAGE_SIZE) ? CUSTOM_PAGE_SIZE : remaining;
     sdev->chunk_sizes[chunk_idx] = chunk_size;
     remaining -= chunk_size;
 
@@ -268,7 +269,7 @@ static int sg_mem_mmap(struct file *filp, struct vm_area_struct *vma)
         if (ret)
             return ret;
 
-        user_vaddr += PAGE_SIZE;
+        user_vaddr += CUSTOM_PAGE_SIZE;
     }
 
     return 0;

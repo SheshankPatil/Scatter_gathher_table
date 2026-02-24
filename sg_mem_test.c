@@ -90,10 +90,20 @@ int main(void)
      * 3. RANDOM ACCESS TEST WITH EXACT DEVMEM TRACKING
      * ------------------------------------------------------------- */
     printf("\n[+] Starting Random Access Test...\n");
-    
-    for (int k = 0; k < 5; k++) {
-        int random_idx = rand() % map_size;
-        uint8_t random_val = rand() % 255;
+
+    for (int k = 0; k < map_size; k++) {
+        int random_idx = k;
+        uint8_t random_val;
+
+        // Write 1's to first 4096 bytes, 2's to second 4096 bytes
+        if (k < 4096) {
+            random_val = 1;
+        } else if (k < 8192) {
+            random_val = 2;
+        } else {
+            random_val = 0x3;  // For any additional bytes beyond 8192
+        }
+
         uint64_t exact_phys = get_phys_addr(&dt, random_idx);
 
         printf("\n  [*] Writing 0x%02X to virtual offset [%d]\n", random_val, random_idx);
